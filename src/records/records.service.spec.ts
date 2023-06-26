@@ -44,6 +44,7 @@ describe('RecordsService', () => {
 
   describe('create', () => {
     it('should create a record', async () => {
+      const trx_manager = get_mocked_query_builder() as any;
       const record_data = { operation: { cost: 10 }, user_id: 1, balance: 100, operation_response: '10' };
       const saved_record = {
         ...record_data,
@@ -53,12 +54,14 @@ describe('RecordsService', () => {
         date: new Date()
       };
 
-      record_repository.save.mockResolvedValue(saved_record);
+      trx_manager
+        .save
+        .mockResolvedValue(saved_record);
 
-      const result = await service.create(record_data as ICreateRecord);
+      const result = await service.create(record_data as ICreateRecord, trx_manager);
 
       expect(result).toEqual(saved_record);
-      expect(record_repository.save).toBeCalledTimes(1);
+      expect(trx_manager.save).toBeCalledTimes(1);
     });
   });
 
@@ -72,7 +75,7 @@ describe('RecordsService', () => {
     });
   });
 
-  describe('prepareResponse', () => {
+  describe('prepare_response', () => {
     it('should remove internal fields from response', () => {
       const response: Partial<Record> = {
         id: 1,

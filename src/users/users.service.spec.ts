@@ -104,13 +104,18 @@ describe('RecordsService', () => {
         it('should update a user balance', async () => {
             const user_id = 1;
             const new_balance = 200;
+            const trx_manager = get_mocked_query_builder() as any;
 
-            await service.update_balance(user_id, new_balance);
-            expect(user_repository.set)
+            trx_manager
+                .save
+                .mockResolvedValue();
+            await service.update_balance(user_id, new_balance, trx_manager);
+
+            expect(trx_manager.set)
                 .toHaveBeenCalledWith({ balance: 200 });
-            expect(user_repository.andWhere)
+            expect(trx_manager.andWhere)
                 .toHaveBeenCalledWith('users.id = :user_id', { user_id: 1 });
-            expect(user_repository.execute).toBeCalledTimes(1);
+            expect(trx_manager.execute).toBeCalledTimes(1);
         });
     });
 });

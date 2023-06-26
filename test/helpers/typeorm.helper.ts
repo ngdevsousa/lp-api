@@ -14,6 +14,7 @@ export const get_mocked_query_builder = () => {
         orderBy: jest.fn().mockReturnThis(),
         skip: jest.fn().mockReturnThis(),
         take: jest.fn().mockReturnThis(),
-        leftJoinAndSelect: jest.fn().mockReturnThis()
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        transaction: jest.fn()
     };
 }
