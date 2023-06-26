@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { ERROR_MESSAGES, JWT_EXP_IN_SECONDS } from '../common/contants';
 import { UserStatus } from '../common/types';
 import { tokenUtils } from '../common/utils/jwt';
@@ -60,10 +60,10 @@ export class UsersService {
     });
   }
 
-  async update_balance(user_id, new_balance) {
+  async update_balance(user_id, new_balance, trx: EntityManager) {
     try {
-      await this.users_repository
-        .createQueryBuilder('users')
+      await trx
+        .createQueryBuilder()
         .update(User)
         .set({ balance: new_balance })
         .andWhere('users.id = :user_id', { user_id: user_id })

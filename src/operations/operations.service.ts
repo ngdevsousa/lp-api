@@ -23,42 +23,45 @@ export class OperationsService {
         })
     }
 
-    async create(operation_data: CreateDTO, user: Partial<User>): Promise<Record> {
+    async create(operation_data: CreateDTO, user: Partial<User>): Promise<Partial<Record>> {
         try {
-            const { type } = operation_data;
-            const op_to_insert = this.prepare_for_insert(type)
-            const { allow_operation, new_balance }
-                = await this.verify_balance(user.id, op_to_insert.cost);
+            const { operation_to_insert, new_balance } = await this.prepare_for_insert(operation_data.type, user.id);
+            const operation_response = await this.process_operation(operation_data);
 
-            if (!allow_operation)
-                throw new BadRequestException(ERROR_MESSAGES.NO_BALANCE)
+            return this.operations_repository.manager.transaction(async trx => {
+                const operation = await trx.save(operation_to_insert);
+                const record = await this.records_service.create({
+                    operation,
+                    user_id: user.id,
+                    balance: new_balance,
+                    operation_response: operation_response.toString()
+                }, trx);
 
-            const operation = await this.operations_repository.save(op_to_insert);
-            const result = await this.handle_operation(operation_data);
-            const record = await this.records_service.create({
-                operation,
-                user_id: user.id,
-                balance: new_balance,
-                operation_response: result.toString()
+                await this.users_service.update_balance(user.id, record.user_balance, trx);
+                return record;
             });
-            await this.users_service.update_balance(user.id, record.user_balance);
-
-            return record;
         } catch (error) {
             Logger.error(error);
             throw error;
         }
     }
 
-    prepare_for_insert(type: OperationType) {
-        const operation = new Operation();
-        operation.type = type;
-        operation.cost = OP_COSTS[type];
+    async prepare_for_insert(type: OperationType, user_id: number) {
+        const operation_cost = OP_COSTS[type];
+        const { allow_operation, new_balance }
+            = await this.verify_balance(user_id, operation_cost);
 
-        return operation;
+        if (!allow_operation)
+            throw new BadRequestException(ERROR_MESSAGES.NO_BALANCE)
+
+        const operation_to_insert = new Operation();
+        operation_to_insert.type = type;
+        operation_to_insert.cost = operation_cost;
+
+        return { operation_to_insert, new_balance };
     }
 
-    async handle_operation(op_data: CreateDTO): Promise<number | string> {
+    async process_operation(op_data: CreateDTO): Promise<number | string> {
         if (!this.is_valid_operation(op_data.type, op_data.x, op_data.y))
             throw new BadRequestException(ERROR_MESSAGES.INVALID_OP);
 

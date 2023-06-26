@@ -1,6 +1,6 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, Repository } from 'typeorm';
+import { Brackets, EntityManager, Repository } from 'typeorm';
 import { ERROR_MESSAGES, RECORD_FIELDS } from '../common/contants';
 import { ICreateRecord, IQueryRecord } from '../common/types';
 import { Record } from '../database/entities/record.entity';
@@ -36,10 +36,10 @@ export class RecordsService {
     return { records, page_number, total_count }
   }
 
-  async create(record_data: ICreateRecord) {
+  async create(record_data: ICreateRecord, trx: EntityManager) {
     try {
       const record_to_insert = this.prepare_for_insert(record_data);
-      const record = await this.records_repository.save(record_to_insert);
+      const record = await trx.save(record_to_insert);
 
       this.prepare_response(record);
 
